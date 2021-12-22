@@ -1,4 +1,5 @@
 mod day_one;
+mod day_two;
 
 use day_one::count_increases;
 use std::{
@@ -8,12 +9,21 @@ use std::{
     str::FromStr,
 };
 
+use crate::day_two::{process_instructions, Movement};
+
 fn main() -> Result<(), Box<dyn Error>> {
     println!("Day One");
     {
         let input = iterate_lines::<i32>("data/day_one.txt")?;
         println!("Part One {}", count_increases(&input, 1));
         println!("Part Two {}", count_increases(&input, 3));
+    }
+
+    println!("Day Two");
+    {
+        let input = iterate_lines::<Movement>("data/day_two.txt")?;
+        let (depth, position) = process_instructions(0, 0, &input);
+        println!("Part One depth: {} position: {}", depth, position);
     }
 
     Ok(())
