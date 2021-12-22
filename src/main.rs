@@ -9,7 +9,7 @@ use std::{
     str::FromStr,
 };
 
-use crate::day_two::{process_instructions, Movement};
+use crate::day_two::{process_instructions, Movement, Submarine};
 
 fn main() -> Result<(), Box<dyn Error>> {
     println!("Day One");
@@ -22,7 +22,9 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("Day Two");
     {
         let input = iterate_lines::<Movement>("data/day_two.txt")?;
-        let (depth, position) = process_instructions(0, 0, &input);
+        let Submarine {
+            depth, position, ..
+        } = process_instructions(Submarine::default(), &input);
         println!("Part One depth: {} position: {}", depth, position);
     }
 

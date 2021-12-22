@@ -49,17 +49,27 @@ impl FromStr for Movement {
     }
 }
 
-pub fn process_instructions(
-    starting_depth: i32,
-    starting_position: i32,
-    instructions: &[Movement],
-) -> (i32, i32) {
-    instructions.iter().fold(
-        (starting_depth, starting_position),
-        |(depth, position), Movement(dir, dist)| match dir {
-            Direction::Forward => (depth, position + dist),
-            Direction::Down => (depth + dist, position),
-            Direction::Up => (depth - dist, position),
-        },
-    )
+#[derive(Default)]
+pub struct Submarine {
+    pub depth: i32,
+    pub position: i32,
+    pub aim: i32,
+}
+
+pub fn process_instructions(submarine: Submarine, instructions: &[Movement]) -> Submarine {
+    instructions
+        .iter()
+        .fold(submarine, |state, Movement(dir, dist)| match dir {
+            Direction::Forward => Submarine {
+                position: state.position + dist,
+                depth: state.depth + (state.aim * dist),
+                ..state
+            },
+            Direction::Down => Submarine {
+                aim: state.aim + dist, ..state
+            },
+            Direction::Up => Submarine {
+                aim: state.aim - dist, ..state
+            },
+        })
 }
