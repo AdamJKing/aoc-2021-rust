@@ -12,7 +12,8 @@ fn main() -> Result<(), Box<dyn Error>> {
     println!("Day One");
     {
         let input = iterate_lines::<i32>("data/day_one.txt")?;
-        println!("Part One {}", count_increases(input));
+        println!("Part One {}", count_increases(&input, 1));
+        println!("Part Two {}", count_increases(&input, 3));
     }
 
     Ok(())
