@@ -1,4 +1,5 @@
 mod day_one;
+mod day_three;
 mod day_two;
 
 use day_one::count_increases;
@@ -9,7 +10,10 @@ use std::{
     str::FromStr,
 };
 
-use crate::day_two::{process_instructions, Movement, Submarine};
+use crate::{
+    day_three::{as_binary_rows, gamma_and_epsilon_rates},
+    day_two::{process_instructions, Movement, Submarine},
+};
 
 fn main() -> Result<(), Box<dyn Error>> {
     println!("Day One");
@@ -25,7 +29,15 @@ fn main() -> Result<(), Box<dyn Error>> {
         let Submarine {
             depth, position, ..
         } = process_instructions(Submarine::default(), &input);
-        println!("Part One depth: {} position: {}", depth, position);
+        println!("depth: {} position: {}", depth, position);
+    }
+
+    println!("Day Three");
+    {
+        let input = iterate_lines::<String>("data/day_three.txt")?;
+        let bits: Vec<[bool; 12]> = as_binary_rows(input);
+        let (gamma, epsilon) = gamma_and_epsilon_rates(bits);
+        println!("gamme: {} epsilon: {}", gamma, epsilon);
     }
 
     Ok(())
