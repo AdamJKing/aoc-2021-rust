@@ -11,7 +11,9 @@ use std::{
 };
 
 use crate::{
-    day_three::{as_binary_rows, gamma_and_epsilon_rates},
+    day_three::{
+        as_binary_rows, co2_scrubber_rating, gamma_and_epsilon_rates, oxygen_generator_rating,
+    },
     day_two::{process_instructions, Movement, Submarine},
 };
 
@@ -36,8 +38,14 @@ fn main() -> Result<(), Box<dyn Error>> {
     {
         let input = iterate_lines::<String>("data/day_three.txt")?;
         let bits: Vec<[bool; 12]> = as_binary_rows(input);
-        let (gamma, epsilon) = gamma_and_epsilon_rates(bits);
-        println!("gamme: {} epsilon: {}", gamma, epsilon);
+        let (gamma, epsilon) = gamma_and_epsilon_rates(&bits);
+        println!("gamma: {} epsilon: {}", gamma, epsilon);
+        let oxy_gen_rating = oxygen_generator_rating(&bits);
+        let co2_scrub_rating = co2_scrubber_rating(&bits);
+        println!(
+            "oxy-gen-rating: {:?}, co2-scrub-rating: {:?}",
+            oxy_gen_rating, co2_scrub_rating
+        );
     }
 
     Ok(())

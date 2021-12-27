@@ -1,20 +1,47 @@
-pub fn gamma_and_epsilon_rates<const S: usize>(
-    bits: impl IntoIterator<Item = [bool; S]>,
-) -> (u32, u32) {
-    let mut total = 0;
-    let mut counts = [0; S];
-
-    for row in bits {
-        for i in 0..S {
-            counts[i] += row[i] as i32;
-        }
-        total += 1;
-    }
-
-    let gamma_rate = build_binary(counts.iter().map(|&c| c >= (total - c)));
-    let epsilon_rate = build_binary(counts.iter().map(|&c| c <= (total - c)));
+pub fn gamma_and_epsilon_rates<const S: usize>(bits: &[[bool; S]]) -> (u32, u32) {
+    let gamma_rate = build_binary(most_common_bits(bits.iter()));
+    let epsilon_rate = build_binary(least_common_bits(bits.iter()));
 
     (gamma_rate, epsilon_rate)
+}
+
+pub fn oxygen_generator_rating<const S: usize>(bits: &[[bool; S]]) -> Option<u32> {
+    let common_bits = most_common_bits(bits.iter());
+    iterative_search(&common_bits, bits).map(build_binary)
+}
+
+pub fn co2_scrubber_rating<const S: usize>(bits: &[[bool; S]]) -> Option<u32> {
+    let common_bits = least_common_bits(bits.iter());
+    iterative_search(&common_bits, bits).map(build_binary)
+}
+
+fn iterative_search<T, const S: usize>(comb: &[T], coll: &[[T; S]]) -> Option<[T; S]>
+where
+    T: Copy + Eq,
+{
+    fn _iterative_search<T, const S: usize>(
+        comb: &[T],
+        pos: usize,
+        coll: &mut Vec<[T; S]>,
+    ) -> Option<[T; S]>
+    where
+        T: Copy + Eq,
+    {
+        if pos == comb.len() + 1 {
+            None
+        } else {
+            coll.retain(|row| comb[0..pos] == row[0..pos]);
+
+            if coll.len() == 1 {
+                coll.get(0).copied()
+            } else {
+                _iterative_search(comb, pos + 1, coll)
+            }
+        }
+    }
+
+    let mut search = coll.to_vec();
+    _iterative_search(comb, 0, &mut search)
 }
 
 pub fn as_binary_rows<const S: usize>(input: impl IntoIterator<Item = String>) -> Vec<[bool; S]> {
@@ -29,10 +56,10 @@ pub fn as_binary_rows<const S: usize>(input: impl IntoIterator<Item = String>) -
         .collect()
 }
 
-fn build_binary(xs: impl DoubleEndedIterator<Item = bool>) -> u32 {
+fn build_binary<const S: usize>(xs: [bool; S]) -> u32 {
     let mut bin = 0;
-    for (i, is_bit) in xs.rev().enumerate() {
-        if is_bit {
+    for (i, is_bit) in xs.iter().rev().enumerate() {
+        if *is_bit {
             bin += u32::pow(2, i as u32);
         }
     }
@@ -40,8 +67,39 @@ fn build_binary(xs: impl DoubleEndedIterator<Item = bool>) -> u32 {
     bin
 }
 
+fn most_common_bits<'a, const S: usize>(bits: impl Iterator<Item = &'a [bool; S]>) -> [bool; S] {
+    let mut total = 0;
+    let mut counts = [0; S];
+
+    for row in bits {
+        for i in 0..S {
+            counts[i] += row[i] as i32;
+        }
+        total += 1;
+    }
+
+    counts.map(|c| c >= (total - c))
+}
+
+#[allow(clippy::overflow_check_conditional)]
+fn least_common_bits<'a, const S: usize>(bits: impl Iterator<Item = &'a [bool; S]>) -> [bool; S] {
+    let mut total = 0;
+    let mut counts = [0; S];
+
+    for row in bits {
+        for i in 0..S {
+            counts[i] += row[i] as i32;
+        }
+        total += 1;
+    }
+
+    counts.map(|c| c < (total - c))
+}
+
 #[cfg(test)]
 mod tests {
+    use std::vec;
+
     use super::*;
 
     #[test]
@@ -61,7 +119,7 @@ mod tests {
             "01010".into(),
         ]);
 
-        let (gamma, _) = gamma_and_epsilon_rates(input);
+        let (gamma, _) = gamma_and_epsilon_rates(&input);
         assert_eq!(gamma, 22);
     }
 
@@ -82,13 +140,60 @@ mod tests {
             "01010".into(),
         ]);
 
-        let (_, epsilon) = gamma_and_epsilon_rates(input);
+        let (_, epsilon) = gamma_and_epsilon_rates(&input);
         assert_eq!(epsilon, 9);
     }
 
     #[test]
     fn should_build_binary() {
-        let result = build_binary([true, false, true, true, false, true].into_iter());
+        let result = build_binary([true, false, true, true, false, true]);
         assert_eq!(result, 0b101101);
+    }
+
+    #[test]
+    fn test_common_bits() {
+        let input: Vec<[bool; 2]> = as_binary_rows([
+            "01".into(),
+            "10".into(),
+            "10".into(),
+            "10".into(),
+            "10".into(),
+        ]);
+
+        assert_eq!(
+            least_common_bits(input.iter()),
+            [false, true],
+            "least common"
+        );
+        assert_eq!(most_common_bits(input.iter()), [true, false], "most common");
+    }
+
+    #[test]
+    fn test_common_bits_when_equal() {
+        let input: Vec<[bool; 2]> =
+            as_binary_rows(["00".into(), "11".into(), "00".into(), "11".into()]);
+
+        assert_eq!(most_common_bits(input.iter()), [true, true], "most common");
+        assert_eq!(
+            least_common_bits(input.iter()),
+            [false, false],
+            "least common"
+        );
+    }
+
+    #[test]
+    fn test_iterative_search() {
+        let input = as_binary_rows(vec!["00".into(), "00".into(), "00".into(), "11".into()]);
+        let result = iterative_search(&[true, true], &input);
+
+        assert_eq!(result, Some([true, true]));
+    }
+
+    #[test]
+    fn test_iterative_search_partial_match() {
+        let input = as_binary_rows(vec!["000".into(), "000".into(), "000".into(), "110".into()]);
+        let result = iterative_search(&[true, true, true], &input);
+
+        assert_eq!(result, Some([true, true, false]));
     }
 }
