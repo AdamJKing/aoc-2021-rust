@@ -6,42 +6,29 @@ pub fn gamma_and_epsilon_rates<const S: usize>(bits: &[[bool; S]]) -> (u32, u32)
 }
 
 pub fn oxygen_generator_rating<const S: usize>(bits: &[[bool; S]]) -> Option<u32> {
-    let common_bits = most_common_bits(bits.iter());
-    iterative_search(&common_bits, bits).map(build_binary)
+    iterative_search(most_common_bits, bits).map(build_binary)
 }
 
 pub fn co2_scrubber_rating<const S: usize>(bits: &[[bool; S]]) -> Option<u32> {
-    let common_bits = least_common_bits(bits.iter());
-    iterative_search(&common_bits, bits).map(build_binary)
+    let a = least_common_bits;
+    iterative_search(least_common_bits, bits).map(build_binary)
 }
 
-fn iterative_search<T, const S: usize>(comb: &[T], coll: &[[T; S]]) -> Option<[T; S]>
+fn iterative_search<T, F, const S: usize>(comb_func: F, coll: &[[T; S]]) -> Option<[T; S]>
 where
-    T: Copy + Eq,
+    T: Copy + PartialEq,
+    F: Fn(Box<dyn Iterator<Item = &[T; S]>>) -> [T; S],
 {
-    fn _iterative_search<T, const S: usize>(
-        comb: &[T],
-        pos: usize,
-        coll: &mut Vec<[T; S]>,
-    ) -> Option<[T; S]>
-    where
-        T: Copy + Eq,
-    {
-        if pos == comb.len() + 1 {
-            None
-        } else {
-            coll.retain(|row| comb[0..pos] == row[0..pos]);
+    let mut search = coll.to_vec();
+    let mut pos = 0;
+    let mut comb = comb_func(Box::new(search.iter()));
 
-            if coll.len() == 1 {
-                coll.get(0).copied()
-            } else {
-                _iterative_search(comb, pos + 1, coll)
-            }
-        }
+    while search.len() > 1 && pos <= comb.len() {
+        search.retain(|row| comb[0..pos] == row[0..pos]);
+        pos += 1;
     }
 
-    let mut search = coll.to_vec();
-    _iterative_search(comb, 0, &mut search)
+    search.get(0).copied()
 }
 
 pub fn as_binary_rows<const S: usize>(input: impl IntoIterator<Item = String>) -> Vec<[bool; S]> {
@@ -73,7 +60,9 @@ fn most_common_bits<'a, const S: usize>(bits: impl Iterator<Item = &'a [bool; S]
 
     for row in bits {
         for i in 0..S {
-            counts[i] += row[i] as i32;
+            if row[i] {
+                counts[i] += 1;
+            }
         }
         total += 1;
     }
@@ -88,7 +77,9 @@ fn least_common_bits<'a, const S: usize>(bits: impl Iterator<Item = &'a [bool; S
 
     for row in bits {
         for i in 0..S {
-            counts[i] += row[i] as i32;
+            if row[i] {
+                counts[i] += 1;
+            }
         }
         total += 1;
     }
@@ -152,20 +143,24 @@ mod tests {
 
     #[test]
     fn test_common_bits() {
-        let input: Vec<[bool; 2]> = as_binary_rows([
-            "01".into(),
-            "10".into(),
-            "10".into(),
-            "10".into(),
-            "10".into(),
+        let input = as_binary_rows([
+            "001".into(),
+            "110".into(),
+            "110".into(),
+            "110".into(),
+            "100".into(),
         ]);
 
         assert_eq!(
             least_common_bits(input.iter()),
-            [false, true],
+            [false, false, true],
             "least common"
         );
-        assert_eq!(most_common_bits(input.iter()), [true, false], "most common");
+        assert_eq!(
+            most_common_bits(input.iter()),
+            [true, true, false],
+            "most common"
+        );
     }
 
     #[test]
@@ -184,16 +179,72 @@ mod tests {
     #[test]
     fn test_iterative_search() {
         let input = as_binary_rows(vec!["00".into(), "00".into(), "00".into(), "11".into()]);
-        let result = iterative_search(&[true, true], &input);
+        let result = iterative_search(|_| [true, true], &input);
 
         assert_eq!(result, Some([true, true]));
     }
 
     #[test]
-    fn test_iterative_search_partial_match() {
-        let input = as_binary_rows(vec!["000".into(), "000".into(), "000".into(), "110".into()]);
-        let result = iterative_search(&[true, true, true], &input);
+    fn test_iterative_search_unordered() {
+        let input = as_binary_rows(vec!["00".into(), "00".into(), "11".into(), "00".into()]);
+        let result = iterative_search(|_| [true, true], &input);
 
-        assert_eq!(result, Some([true, true, false]));
+        assert_eq!(result, Some([true, true]));
+    }
+
+    #[test]
+    fn test_iterative_search_unordered_partial() {
+        let input = as_binary_rows(vec!["00".into(), "00".into(), "10".into(), "00".into()]);
+        let result = iterative_search(|_| [true, true], &input);
+
+        assert_eq!(result, Some([true, false]));
+    }
+
+    #[test]
+    fn test_iterative_search_partial_match() {
+        let input = as_binary_rows(vec!["000".into(), "000".into(), "000".into(), "100".into()]);
+        let result = iterative_search(|_| [true, true, true], &input);
+
+        assert_eq!(result, Some([true, false, false]));
+    }
+
+    #[test]
+    fn should_calculate_oxygen_rating_properly() {
+        let input: Vec<[bool; 5]> = as_binary_rows([
+            "00100".into(),
+            "11110".into(),
+            "10110".into(),
+            "10111".into(),
+            "10101".into(),
+            "01111".into(),
+            "00111".into(),
+            "11100".into(),
+            "10000".into(),
+            "11001".into(),
+            "00010".into(),
+            "01010".into(),
+        ]);
+
+        assert_eq!(oxygen_generator_rating(&input), Some(23));
+    }
+
+    #[test]
+    fn should_calculate_co2_scrubber_rating_properly() {
+        let input: Vec<[bool; 5]> = as_binary_rows([
+            "00100".into(),
+            "11110".into(),
+            "10110".into(),
+            "10111".into(),
+            "10101".into(),
+            "01111".into(),
+            "00111".into(),
+            "11100".into(),
+            "10000".into(),
+            "11001".into(),
+            "00010".into(),
+            "01010".into(),
+        ]);
+
+        assert_eq!(co2_scrubber_rating(&input), Some(10));
     }
 }
