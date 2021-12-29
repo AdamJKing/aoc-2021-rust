@@ -6,29 +6,29 @@ pub fn gamma_and_epsilon_rates<const S: usize>(bits: &[[bool; S]]) -> (u32, u32)
 }
 
 pub fn oxygen_generator_rating<const S: usize>(bits: &[[bool; S]]) -> Option<u32> {
-    iterative_search(most_common_bits, bits).map(build_binary)
+    iterative_search(|x| most_common_bits(x), bits).map(build_binary)
 }
 
 pub fn co2_scrubber_rating<const S: usize>(bits: &[[bool; S]]) -> Option<u32> {
-    let a = least_common_bits;
-    iterative_search(least_common_bits, bits).map(build_binary)
+    iterative_search(|x| least_common_bits(x), bits).map(build_binary)
 }
 
 fn iterative_search<T, F, const S: usize>(comb_func: F, coll: &[[T; S]]) -> Option<[T; S]>
 where
-    T: Copy + PartialEq,
-    F: Fn(Box<dyn Iterator<Item = &[T; S]>>) -> [T; S],
+    T: Clone + PartialEq,
+    F: for<'b> Fn(Box<dyn Iterator<Item = &'b [T; S]> + 'b>) -> [T; S],
 {
     let mut search = coll.to_vec();
     let mut pos = 0;
     let mut comb = comb_func(Box::new(search.iter()));
 
     while search.len() > 1 && pos <= comb.len() {
-        search.retain(|row| comb[0..pos] == row[0..pos]);
+        search.retain(|row| comb[pos] == row[pos]);
         pos += 1;
+        comb = comb_func(Box::new(search.iter()));
     }
 
-    search.get(0).copied()
+    search.get(0).cloned()
 }
 
 pub fn as_binary_rows<const S: usize>(input: impl IntoIterator<Item = String>) -> Vec<[bool; S]> {
