@@ -1,3 +1,4 @@
+mod day_four;
 mod day_one;
 mod day_three;
 mod day_two;
@@ -46,6 +47,11 @@ fn main() -> Result<(), Box<dyn Error>> {
             "oxy-gen-rating: {:?}, co2-scrub-rating: {:?}",
             oxy_gen_rating, co2_scrub_rating
         );
+    }
+
+    println!("Day Four");
+    {
+        // let input =
     }
 
     Ok(())
